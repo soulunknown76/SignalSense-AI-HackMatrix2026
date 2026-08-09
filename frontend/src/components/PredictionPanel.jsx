@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, AlertTriangle, Radio, Compass, ShieldCheck, Zap, Activity } from 'lucide-react';
+import { Cpu, Compass, ShieldCheck } from 'lucide-react';
 import { getRiskBadge, formatSignal } from '../utils/formatters';
 
 export default function PredictionPanel({ prediction, loading }) {
@@ -68,7 +68,7 @@ export default function PredictionPanel({ prediction, loading }) {
         marginBottom: '16px',
         display: 'flex',
         alignItems: 'center',
-        justify-content: 'space-between',
+        justifyContent: 'space-between'
       }}>
         <div>
           <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>
