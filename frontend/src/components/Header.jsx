@@ -1,7 +1,7 @@
 import React from 'react';
-import { Radio, Signal, ShieldCheck } from 'lucide-react';
+import { ShieldCheck, User, LogOut } from 'lucide-react';
 
-export default function Header({ activeCarrierCount, backendConnected }) {
+export default function Header({ activeCarrierCount, backendConnected, user, onLogout }) {
   return (
     <header className="glass-panel app-header">
       <div className="brand-section">
@@ -19,6 +19,20 @@ export default function Header({ activeCarrierCount, backendConnected }) {
           <span className="live-dot"></span>
           LIVE RADAR
         </div>
+        
+        {user && (
+          <div className="user-profile-badge">
+            <User size={14} style={{ color: '#38bdf8' }} />
+            <span className="user-name-text">{user.username}</span>
+            <span className="user-phone-text">({user.phone})</span>
+            {onLogout && (
+              <button onClick={onLogout} className="logout-btn" title="Logout">
+                <LogOut size={12} style={{ display: 'inline', marginRight: 2 }} /> Logout
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="location-chip">
           <ShieldCheck size={14} style={{ display: 'inline', marginRight: 4 }} />
           {backendConnected ? 'API Connected' : 'Demo Mode (Mock Sync)'}
@@ -27,3 +41,4 @@ export default function Header({ activeCarrierCount, backendConnected }) {
     </header>
   );
 }
+

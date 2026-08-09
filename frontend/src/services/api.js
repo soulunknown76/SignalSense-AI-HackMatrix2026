@@ -157,3 +157,29 @@ export async function fetchRecommendation(lat, lng) {
   };
 }
 
+export async function loginUser(username, phone) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, phone }),
+    });
+    if (res.ok) {
+      return await res.json();
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      return { success: false, message: errData.message || 'Authentication failed' };
+    }
+  } catch (e) {
+    console.warn('Backend API /auth/login offline, returning local session.');
+    return {
+      success: true,
+      message: 'Logged in locally',
+      user: { id: `u_${Date.now()}`, username, phone },
+    };
+  }
+}
+
+

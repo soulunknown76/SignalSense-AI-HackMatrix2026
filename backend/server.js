@@ -10,6 +10,7 @@ import healthRoutes from './routes/healthRoutes.js';
 import measurementRoutes from './routes/measurementRoutes.js';
 import carrierRoutes from './routes/carrierRoutes.js';
 import predictionRoutes from './routes/predictionRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 // Load environment variables
@@ -37,6 +38,8 @@ app.use('/api', healthRoutes);
 app.use('/api', measurementRoutes);
 app.use('/api', carrierRoutes);
 app.use('/api', predictionRoutes);
+app.use('/api', authRoutes);
+
 
 // Root route
 app.get('/', (req, res) => {

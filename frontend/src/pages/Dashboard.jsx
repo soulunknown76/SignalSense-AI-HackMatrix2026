@@ -7,7 +7,7 @@ import PredictionPanel from '../components/PredictionPanel';
 import CarrierComparison from '../components/CarrierComparison';
 import { fetchMeasurements, fetchCarriers, fetchPrediction, checkHealth } from '../services/api';
 
-export default function Dashboard() {
+export default function Dashboard({ user, onLogout }) {
   const [searchLocation, setSearchLocation] = useState('Kota Junction');
   const [center, setCenter] = useState({ lat: 25.181, lng: 75.839 });
   const [measurements, setMeasurements] = useState([]);
@@ -58,7 +58,8 @@ export default function Dashboard() {
   return (
     <div className="app-container">
       {/* App Header */}
-      <Header activeCarrierCount={carriers.length} backendConnected={backendConnected} />
+      <Header activeCarrierCount={carriers.length} backendConnected={backendConnected} user={user} onLogout={onLogout} />
+
 
       {/* Location Search Bar */}
       <SearchBar
