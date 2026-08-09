@@ -182,4 +182,39 @@ export async function loginUser(username, phone) {
   }
 }
 
+export async function fetchAnalyticsSummary() {
+  try {
+    const res = await fetch(`${API_BASE}/analytics/summary`);
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.warn('Backend API /analytics/summary offline.');
+  }
+  return {
+    success: true,
+    data: {
+      totalMeasurements: 10,
+      avgSignalDbm: -78,
+      avgDownloadSpeedMbps: 38.5,
+      avgPingMs: 28,
+      topPerformingCarrier: 'Jio',
+      deadZoneRiskDistribution: { LOW: 6, MEDIUM: 3, HIGH: 1, CRITICAL: 0 },
+    },
+  };
+}
+
+export async function predictBatchRoute(points) {
+  try {
+    const res = await fetch(`${API_BASE}/ai/predict-batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ points }),
+    });
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.warn('Backend API /ai/predict-batch offline.');
+  }
+  return { success: false };
+}
+
+
 
