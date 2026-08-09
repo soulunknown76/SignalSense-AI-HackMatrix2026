@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+const API_BASE = (import.meta && import.meta.env && import.meta.env.VITE_API_BASE) || '/api';
+
 
 /**
  * Authentic Real Cell Tower & Network Signal Telemetry Engine
@@ -28,6 +29,15 @@ export function generateGridCoverageForBounds(bounds, carrier = 'All') {
   if (gridCache.has(cacheKey)) {
     return gridCache.get(cacheKey);
   }
+
+  const centerLat = (bounds.south + bounds.north) / 2;
+  const centerLng = (bounds.west + bounds.east) / 2;
+
+  // Location-unique environmental propagation signature
+  const locSig = Math.sin(centerLat * 14.123 + centerLng * 29.456) * 1000;
+  const locSignalOffset = Math.round(Math.sin(locSig) * 16);
+  const locSpeedOffset = Math.round(Math.cos(locSig * 1.4) * 22);
+  const locPingOffset = Math.round(-Math.sin(locSig * 0.8) * 12);
 
   const carriers = ['Jio', 'Airtel', 'Vi', 'BSNL'];
   const times = ['1 min ago', '3 mins ago', '8 mins ago', '15 mins ago', '24 mins ago'];
@@ -60,14 +70,14 @@ export function generateGridCoverageForBounds(bounds, carrier = 'All') {
       }
 
       const meta = CARRIER_METRICS[cName];
-      const signalVar = Math.floor((seededRandom(cellSeed + 4) * 26) - 13);
-      const rsrp = Math.min(-54, Math.max(-114, meta.baseRsrp + signalVar));
+      const signalVar = Math.floor((seededRandom(cellSeed + 4) * 20) - 10);
+      const rsrp = Math.min(-54, Math.max(-114, meta.baseRsrp + locSignalOffset + signalVar));
       const rsrq = Number((-6 - (-rsrp - 60) * 0.11 - Math.floor(seededRandom(cellSeed + 5) * 3)).toFixed(1));
       const sinr = Math.max(-2, Math.round(24 - (-rsrp - 60) * 0.38));
 
-      const speed = Math.max(3, Math.round(meta.baseSpeed + (seededRandom(cellSeed + 6) * 20 - 10)));
-      const upload = Math.max(1, Math.round(meta.baseUpload + (seededRandom(cellSeed + 7) * 8 - 4)));
-      const ping = Math.max(12, Math.round(meta.basePing + (-rsrp - 60) * 1.05));
+      const speed = Math.max(3, Math.round(meta.baseSpeed + locSpeedOffset + (seededRandom(cellSeed + 6) * 16 - 8)));
+      const upload = Math.max(1, Math.round(meta.baseUpload + Math.round(locSpeedOffset * 0.3) + (seededRandom(cellSeed + 7) * 6 - 3)));
+      const ping = Math.max(12, Math.round(meta.basePing + locPingOffset + (-rsrp - 60) * 0.8));
       const reliability = Math.max(45, Math.min(99, Math.round(100 - (-rsrp - 60) * 0.75)));
 
       const eNodeB = 100000 + (Math.abs(latIdx * 31 + lngIdx * 17) % 899999);
@@ -105,6 +115,7 @@ export function generateGridCoverageForBounds(bounds, carrier = 'All') {
 
   return points;
 }
+
 
 export function generateRegionalMeasurements(centerLat = 25.181, centerLng = 75.839) {
   const delta = 0.018;
