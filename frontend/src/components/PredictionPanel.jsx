@@ -1,13 +1,13 @@
 import React from 'react';
-import { Cpu, Compass, ShieldCheck } from 'lucide-react';
+import { Cpu, Compass, ShieldCheck, Zap, Radio } from 'lucide-react';
 import { getRiskBadge, formatSignal } from '../utils/formatters';
 
-export default function PredictionPanel({ prediction, loading }) {
+export default function PredictionPanel({ prediction, loading, selectedTowerNode }) {
   if (loading) {
     return (
-      <div className="glass-panel prediction-card" style={{ textAlign: 'center', padding: '32px' }}>
-        <Cpu className="animate-spin" size={28} color="#3b82f6" style={{ margin: '0 auto 12px' }} />
-        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Running IDW Spatial Interpolation & AI Dead Zone model...</p>
+      <div className="glass-panel sidebar-card" style={{ textAlign: 'center', padding: '32px' }}>
+        <Cpu className="animate-spin" size={24} color="#ffffff" style={{ margin: '0 auto 10px' }} />
+        <p style={{ color: '#a1a1aa', fontSize: '0.82rem' }}>Evaluating IDW Spatial Interpolation & Cell Node RF Model...</p>
       </div>
     );
   }
@@ -24,123 +24,150 @@ export default function PredictionPanel({ prediction, loading }) {
     recommendation,
     lat,
     lng,
+    selectedCarrier,
+    selectedNodeId
   } = prediction || {
-    riskLevel: 'MEDIUM',
-    probabilityOfDeadZone: 28,
-    expectedSignal: -74,
-    expectedSpeed: 45,
-    expectedPing: 22,
-    compositeQualityIndex: 86,
-    nearestCellNodeMeters: 320,
-    spatialConfidence: 94,
-    recommendation: 'Jio provides optimal 5G coverage here.',
-    lat: 25.181,
-    lng: 75.839,
+    riskLevel: 'LOW',
+    probabilityOfDeadZone: 18,
+    expectedSignal: -72,
+    expectedSpeed: 58,
+    expectedPing: 18,
+    compositeQualityIndex: 92,
+    nearestCellNodeMeters: 220,
+    spatialConfidence: 96,
+    recommendation: 'Optimal cellular reception. Sub-20ms low latency cell node operating here.',
+    lat: 25.148,
+    lng: 75.845,
   };
 
   const riskBadge = getRiskBadge(riskLevel);
 
   return (
-    <div className="glass-panel prediction-card">
-      {/* Header with Risk & Quality Score */}
-      <div className="risk-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Cpu size={20} color="#3b82f6" />
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>AI RF Prediction</h3>
+    <div className="glass-panel sidebar-card">
+      {/* Title Bar */}
+      <div className="card-section-title">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Cpu size={16} color="#ffffff" />
+          <span>AI RF Prediction</span>
         </div>
-        <div className={`risk-badge-${riskLevel.toLowerCase()}`}>
-          Risk: {riskBadge.label} {riskBadge.emoji}
-        </div>
+        <span style={{
+          fontSize: '0.72rem',
+          padding: '3px 8px',
+          borderRadius: '12px',
+          background: '#ffffff',
+          color: '#000000',
+          fontWeight: '800'
+        }}>
+          {riskBadge.label} {riskBadge.emoji}
+        </span>
       </div>
 
-      {lat && lng && (
-        <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: 4, marginBottom: '12px' }}>
-          <Compass size={12} /> Target: {lat.toFixed(4)}, {lng.toFixed(4)}
+      {selectedTowerNode ? (
+        <div style={{ fontSize: '0.78rem', padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', border: '1px solid #ffffff', marginBottom: '12px', color: '#ffffff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', marginBottom: '2px' }}>
+            <Radio size={13} /> Selected Node: {selectedTowerNode.carrier} Tower
+          </div>
+          <div style={{ fontSize: '0.72rem', color: '#a1a1aa', fontFamily: 'monospace' }}>
+            eNodeB: {selectedTowerNode.eNodeB || 40159} | Cell ID: {selectedTowerNode.cellId || 102} | Band: {selectedTowerNode.band || '5G n78'}
+          </div>
         </div>
+      ) : (
+        lat && lng && (
+          <div style={{ fontSize: '0.75rem', color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: 4, marginBottom: '12px' }}>
+            <Compass size={11} /> Target Coordinates: {lat.toFixed(4)}, {lng.toFixed(4)}
+          </div>
+        )
       )}
 
-      {/* CQI Composite Quality Score Badge */}
+      {/* CQI Composite Score */}
       <div style={{
-        background: 'rgba(30, 41, 59, 0.6)',
-        border: '1px solid rgba(59, 130, 246, 0.2)',
-        borderRadius: '12px',
-        padding: '12px 16px',
-        marginBottom: '16px',
+        background: '#09090b',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: '8px',
+        padding: '10px 14px',
+        marginBottom: '14px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
         <div>
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>
-            Quality Score (CQI)
+          <div style={{ fontSize: '0.7rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '700' }}>
+            Quality Index (CQI)
           </div>
-          <div style={{ fontSize: '1.4rem', fontWeight: '800', color: compositeQualityIndex >= 75 ? '#10b981' : compositeQualityIndex >= 50 ? '#f59e0b' : '#ef4444' }}>
-            {compositeQualityIndex || 85} <span style={{ fontSize: '0.8rem', color: '#64748b' }}>/ 100</span>
+          <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#ffffff' }}>
+            {compositeQualityIndex || 92} <span style={{ fontSize: '0.75rem', color: '#71717a', fontWeight: 'normal' }}>/ 100</span>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
-            <ShieldCheck size={12} color="#06b6d4" /> Spatial Conf.
+          <div style={{ fontSize: '0.7rem', color: '#71717a', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
+            <ShieldCheck size={11} color="#ffffff" /> Spatial Conf.
           </div>
-          <div style={{ fontSize: '1.1rem', fontWeight: '700', color: '#38bdf8' }}>
-            {spatialConfidence || 92}%
+          <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#ffffff' }}>
+            {spatialConfidence || 96}%
           </div>
         </div>
       </div>
 
-      {/* Dead Zone Probability Bar */}
-      <div className="progress-section">
-        <div className="progress-label-row">
-          <span>Probability of Dead Zone</span>
-          <span style={{ fontWeight: '800', color: probabilityOfDeadZone > 60 ? '#ef4444' : probabilityOfDeadZone > 30 ? '#f59e0b' : '#10b981' }}>
+      {/* Dead Zone Progress Bar */}
+      <div style={{ marginBottom: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#a1a1aa', marginBottom: '6px' }}>
+          <span>Dead-Zone Risk</span>
+          <span style={{ fontWeight: '800', color: '#ffffff' }}>
             {probabilityOfDeadZone}%
           </span>
         </div>
-        <div className="progress-bar-bg">
+        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
           <div
-            className="progress-bar-fill"
             style={{
+              height: '100%',
               width: `${probabilityOfDeadZone}%`,
-              background: probabilityOfDeadZone > 60
-                ? 'linear-gradient(90deg, #f59e0b 0%, #ef4444 100%)'
-                : 'linear-gradient(90deg, #10b981 0%, #f59e0b 100%)'
+              background: '#ffffff',
+              borderRadius: '4px',
+              transition: 'width 0.4s ease'
             }}
           ></div>
         </div>
       </div>
 
-      {/* Detailed Telemetry Stat Grid */}
-      <div className="prediction-stat-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '14px' }}>
-        <div className="stat-box" style={{ padding: '10px 8px' }}>
-          <div className="stat-label" style={{ fontSize: '0.7rem' }}>Exp. Signal</div>
-          <div className="stat-value" style={{ fontSize: '0.95rem', color: expectedSignal < -95 ? '#ef4444' : '#38bdf8' }}>
+      {/* Telemetry Cells */}
+      <div className="metrics-grid-3">
+        <div className="metric-cell">
+          <span className="metric-label">Signal RSRP</span>
+          <span className="metric-value" style={{ fontSize: '0.9rem' }}>
             {formatSignal(expectedSignal)}
-          </div>
+          </span>
         </div>
-
-        <div className="stat-box" style={{ padding: '10px 8px' }}>
-          <div className="stat-label" style={{ fontSize: '0.7rem' }}>Exp. Speed</div>
-          <div className="stat-value" style={{ fontSize: '0.95rem', color: '#a7f3d0' }}>
-            {expectedSpeed || 45} <span style={{ fontSize: '0.65rem' }}>Mbps</span>
-          </div>
+        <div className="metric-cell">
+          <span className="metric-label">Speed</span>
+          <span className="metric-value" style={{ fontSize: '0.9rem' }}>
+            {expectedSpeed || 58} <span style={{ fontSize: '0.65rem', fontWeight: 'normal' }}>Mbps</span>
+          </span>
         </div>
-
-        <div className="stat-box" style={{ padding: '10px 8px' }}>
-          <div className="stat-label" style={{ fontSize: '0.7rem' }}>Nearest Node</div>
-          <div className="stat-value" style={{ fontSize: '0.95rem', color: '#fde047' }}>
-            {nearestCellNodeMeters || 350} <span style={{ fontSize: '0.65rem' }}>m</span>
-          </div>
+        <div className="metric-cell">
+          <span className="metric-label">Node Dist.</span>
+          <span className="metric-value" style={{ fontSize: '0.9rem' }}>
+            {nearestCellNodeMeters || 220} <span style={{ fontSize: '0.65rem', fontWeight: 'normal' }}>m</span>
+          </span>
         </div>
       </div>
 
-      {/* AI Recommendation Box */}
-      <div className="recommendation-box" style={{ marginTop: '14px' }}>
-        <div className="recommendation-icon">⚡</div>
+      {/* AI Recommendation */}
+      <div style={{
+        marginTop: '14px',
+        padding: '10px 12px',
+        borderRadius: '8px',
+        background: '#09090b',
+        border: '1px solid var(--border-subtle)',
+        display: 'flex',
+        gap: '10px',
+        alignItems: 'flex-start'
+      }}>
+        <Zap size={16} color="#ffffff" style={{ marginTop: 2, flexShrink: 0 }} />
         <div>
-          <div style={{ fontWeight: '700', fontSize: '0.78rem', color: '#93c5fd', textTransform: 'uppercase', marginBottom: '2px' }}>
+          <div style={{ fontWeight: '800', fontSize: '0.72rem', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '2px' }}>
             AI Carrier Recommendation
           </div>
-          <div className="recommendation-text">
+          <div style={{ fontSize: '0.8rem', color: '#a1a1aa', lineHeight: '1.4' }}>
             {recommendation}
           </div>
         </div>

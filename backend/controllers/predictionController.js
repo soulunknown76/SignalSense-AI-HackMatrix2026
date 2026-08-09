@@ -7,6 +7,7 @@ export const getPrediction = async (req, res, next) => {
   try {
     const lat = parseFloat(req.query.lat) || 25.181;
     const lng = parseFloat(req.query.lng) || 75.839;
+    const { carrier, nodeId } = req.query;
 
     let telemetry = [];
     if (getDBStatus()) {
@@ -15,7 +16,7 @@ export const getPrediction = async (req, res, next) => {
       telemetry = INITIAL_MEASUREMENTS;
     }
 
-    const prediction = predictDeadZoneRisk(lat, lng, telemetry);
+    const prediction = predictDeadZoneRisk(lat, lng, telemetry, { carrier, nodeId });
     res.status(200).json(prediction);
   } catch (error) {
     next(error);
@@ -26,6 +27,7 @@ export const getRecommendation = async (req, res, next) => {
   try {
     const lat = parseFloat(req.query.lat) || 25.181;
     const lng = parseFloat(req.query.lng) || 75.839;
+    const { carrier } = req.query;
 
     let telemetry = [];
     if (getDBStatus()) {
@@ -34,7 +36,7 @@ export const getRecommendation = async (req, res, next) => {
       telemetry = INITIAL_MEASUREMENTS;
     }
 
-    const rec = getBestCarrierRecommendation(lat, lng, telemetry);
+    const rec = getBestCarrierRecommendation(lat, lng, telemetry, carrier);
     res.status(200).json(rec);
   } catch (error) {
     next(error);

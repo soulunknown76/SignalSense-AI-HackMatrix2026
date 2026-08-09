@@ -1,26 +1,76 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import React, { useState, useEffect, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { getSignalColor, formatSignal, formatSpeed } from '../utils/formatters';
-import { Layers, Signal } from 'lucide-react';
+import { Layers, Signal, ZoomIn } from 'lucide-react';
 
-// Custom marker generator using L.divIcon
-const createCustomMarker = (signal, carrier) => {
+const MIN_MARKER_ZOOM = 13;
+
+const createCustomMarker = (signal, carrier, isSelected) => {
   const color = getSignalColor(signal);
   const initial = carrier ? carrier.charAt(0) : 'S';
+  const border = isSelected ? '3px solid #ffffff' : '2px solid rgba(255, 255, 255, 0.9)';
+  const shadow = isSelected ? `0 0 20px ${color}` : `0 0 10px ${color}`;
   
   return L.divIcon({
     className: 'custom-leaflet-marker-wrapper',
-    html: `<div class="custom-leaflet-marker" style="background-color: ${color}; box-shadow: 0 0 10px ${color};">
+    html: `<div class="custom-leaflet-marker" style="background-color: ${color}; color: #ffffff; border: ${border}; box-shadow: ${shadow};">
             ${initial}
           </div>`,
-    iconSize: [26, 26],
-    iconAnchor: [13, 13],
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
     popupAnchor: [0, -14],
   });
 };
 
-// Component to handle map clicks and trigger AI Prediction
+function MapRecenter({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center && typeof center.lat === 'number' && typeof center.lng === 'number') {
+      map.flyTo([center.lat, center.lng], 14, {
+        animate: true,
+        duration: 1.2
+      });
+    }
+  }, [center, map]);
+  return null;
+}
+
+function MapEventsHandler({ onBoundsChange, onZoomChange }) {
+  const map = useMapEvents({
+    moveend() {
+      if (onBoundsChange) {
+        const b = map.getBounds();
+        onBoundsChange({
+          south: b.getSouth(),
+          north: b.getNorth(),
+          west: b.getWest(),
+          east: b.getEast(),
+        });
+      }
+    },
+    zoomend() {
+      const z = map.getZoom();
+      if (onZoomChange) onZoomChange(z);
+      if (onBoundsChange) {
+        const b = map.getBounds();
+        onBoundsChange({
+          south: b.getSouth(),
+          north: b.getNorth(),
+          west: b.getWest(),
+          east: b.getEast(),
+        });
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (onZoomChange) onZoomChange(map.getZoom());
+  }, [map, onZoomChange]);
+
+  return null;
+}
+
 function MapClickHandler({ onMapClick }) {
   useMapEvents({
     click(e) {
@@ -30,12 +80,19 @@ function MapClickHandler({ onMapClick }) {
   return null;
 }
 
-export default function MapView({ measurements, selectedCarrier, setSelectedCarrier, onMapClick, center }) {
+export default function MapView({ measurements, selectedCarrier, setSelectedCarrier, selectedTowerNode, onSelectTowerNode, onMapClick, onBoundsChange, center }) {
   const [mapType, setMapType] = useState('dark');
+  const [zoomLevel, setZoomLevel] = useState(14);
+
+  const handleZoomChange = useCallback((z) => {
+    setZoomLevel(z);
+  }, []);
 
   const filteredMeasurements = selectedCarrier === 'All'
     ? measurements
-    : measurements.filter(m => m.carrier === selectedCarrier);
+    : measurements.filter(m => m.carrier && m.carrier.toLowerCase() === selectedCarrier.toLowerCase());
+
+  const showMarkers = zoomLevel >= MIN_MARKER_ZOOM;
 
   const tileUrls = {
     dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
@@ -49,9 +106,15 @@ export default function MapView({ measurements, selectedCarrier, setSelectedCarr
         <div className="map-title">
           <Signal size={18} color="#3b82f6" />
           Interactive Coverage Map
-          <span style={{ fontSize: '0.8rem', color: '#64748b', marginLeft: 8 }}>
-            ({filteredMeasurements.length} measurement points)
-          </span>
+          {showMarkers ? (
+            <span style={{ fontSize: '0.8rem', color: '#64748b', marginLeft: 8 }}>
+              ({filteredMeasurements.length} cell nodes visible)
+            </span>
+          ) : (
+            <span style={{ fontSize: '0.78rem', color: '#f59e0b', marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <ZoomIn size={13} /> Zoom in to inspect cell towers (Zoom: {zoomLevel} / Min: {MIN_MARKER_ZOOM})
+            </span>
+          )}
         </div>
 
         <div className="carrier-filter-group">
@@ -66,11 +129,11 @@ export default function MapView({ measurements, selectedCarrier, setSelectedCarr
           ))}
           <button
             className="filter-btn"
-            style={{ marginLeft: 8 }}
+            style={{ marginLeft: 6 }}
             onClick={() => setMapType(prev => prev === 'dark' ? 'google' : prev === 'google' ? 'satellite' : 'dark')}
-            title="Toggle Map Style (Dark / Google / Satellite)"
+            title="Toggle Map Style"
           >
-            <Layers size={14} style={{ display: 'inline', marginRight: 4 }} />
+            <Layers size={13} style={{ display: 'inline', marginRight: 3 }} />
             {mapType.toUpperCase()}
           </button>
         </div>
@@ -84,39 +147,90 @@ export default function MapView({ measurements, selectedCarrier, setSelectedCarr
           style={{ width: '100%', height: '100%' }}
         >
           <TileLayer
-            attribution='&copy; <a href="https://carto.com/">CARTO</a> & Google Maps'
+            attribution='&copy; CARTO & OpenStreetMap'
             url={tileUrls[mapType]}
           />
           
+          <MapRecenter center={center} />
+          <MapEventsHandler onBoundsChange={onBoundsChange} onZoomChange={handleZoomChange} />
           <MapClickHandler onMapClick={onMapClick} />
 
-          {filteredMeasurements.map((m) => (
-            <Marker
-              key={m.id || `${m.lat}-${m.lng}-${m.carrier}`}
-              position={[m.lat, m.lng]}
-              icon={createCustomMarker(m.signal, m.carrier)}
-              evented={true}
-              eventHandlers={{
-                click: () => onMapClick(m.lat, m.lng)
-              }}
-            >
-              <Popup>
-                <div style={{ padding: '4px' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#38bdf8', marginBottom: '4px' }}>
-                    {m.carrier} Network Point
+          {showMarkers && filteredMeasurements.map((m) => {
+            const isSelected = selectedTowerNode && (selectedTowerNode.id === m.id || (selectedTowerNode.lat === m.lat && selectedTowerNode.lng === m.lng));
+
+            return (
+              <Marker
+                key={m.id || `${m.lat}-${m.lng}-${m.carrier}`}
+                position={[m.lat, m.lng]}
+                icon={createCustomMarker(m.signal, m.carrier, isSelected)}
+                evented={true}
+                eventHandlers={{
+                  click: () => onSelectTowerNode(m)
+                }}
+              >
+                {/* Instant Hover Tooltip */}
+                <Tooltip direction="top" offset={[0, -16]} opacity={0.96} sticky={true}>
+                  <div style={{ padding: '2px 4px', fontSize: '0.8rem', color: '#f8fafc', lineHeight: '1.4' }}>
+                    <div style={{ fontWeight: '700', color: '#38bdf8', marginBottom: '2px' }}>
+                      {m.carrier} Tower Node ({m.band || '5G/LTE'})
+                    </div>
+                    <div>
+                      <span style={{ color: '#94a3b8' }}>Signal: </span>
+                      <strong style={{ color: getSignalColor(m.signal) }}>{formatSignal(m.signal)}</strong>
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>
+                      Speed: {formatSpeed(m.speed)} &bull; Latency: {m.ping || 22}ms
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.85rem', color: '#e2e8f0' }}>
-                    <strong>Signal:</strong> {formatSignal(m.signal)} <br />
-                    <strong>Speed:</strong> {formatSpeed(m.speed)} <br />
-                    <strong>Coordinates:</strong> {m.lat.toFixed(4)}, {m.lng.toFixed(4)}
+                </Tooltip>
+
+                {/* Click Popup Details */}
+                <Popup>
+                  <div style={{ padding: '4px', minWidth: '190px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '6px', marginBottom: '8px' }}>
+                      <span style={{ fontWeight: '700', fontSize: '1.05rem', color: '#38bdf8' }}>
+                        {m.carrier} Network Node
+                      </span>
+                      <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(59,130,246,0.2)', color: '#38bdf8', fontWeight: '600' }}>
+                        {m.band || 'LTE/5G'}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.85rem', color: '#e2e8f0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#94a3b8' }}>RSRP Signal:</span>
+                        <strong style={{ color: getSignalColor(m.signal) }}>{formatSignal(m.signal)}</strong>
+                      </div>
+                      {m.rsrq !== undefined && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: '#94a3b8' }}>RSRQ / SINR:</span>
+                          <span>{m.rsrq} dB / {m.sinr || 15} dB</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#94a3b8' }}>Download Speed:</span>
+                        <strong>{formatSpeed(m.speed)}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#94a3b8' }}>Latency Ping:</span>
+                        <span>{m.ping || 24} ms</span>
+                      </div>
+                      {m.eNodeB && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
+                          <span>eNodeB / Cell ID:</span>
+                          <span style={{ fontFamily: 'monospace' }}>{m.eNodeB} / {m.cellId}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#38bdf8', fontWeight: '600' }}>
+                      ⚡ Node selected: AI prediction updated
+                    </div>
                   </div>
-                  <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#94a3b8' }}>
-                    Click map location for AI prediction
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+                </Popup>
+              </Marker>
+            );
+          })}
         </MapContainer>
       </div>
     </div>
