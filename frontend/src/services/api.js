@@ -17,9 +17,16 @@ function seededRandom(seed) {
   return x - Math.floor(x);
 }
 
+const gridCache = new Map();
+
 export function generateGridCoverageForBounds(bounds, carrier = 'All') {
   if (!bounds || !bounds.south || !bounds.north) {
     return generateRegionalMeasurements(25.181, 75.839);
+  }
+
+  const cacheKey = `${bounds.south.toFixed(3)}_${bounds.north.toFixed(3)}_${bounds.west.toFixed(3)}_${bounds.east.toFixed(3)}_${carrier}`;
+  if (gridCache.has(cacheKey)) {
+    return gridCache.get(cacheKey);
   }
 
   const carriers = ['Jio', 'Airtel', 'Vi', 'BSNL'];
@@ -88,6 +95,12 @@ export function generateGridCoverageForBounds(bounds, carrier = 'All') {
         time: times[Math.abs(cellSeed) % times.length]
       });
     }
+  }
+
+  gridCache.set(cacheKey, points);
+  if (gridCache.size > 50) {
+    const firstKey = gridCache.keys().next().value;
+    gridCache.delete(firstKey);
   }
 
   return points;

@@ -2,15 +2,15 @@ import React from 'react';
 import { BarChart3, Signal, Download, Upload, Zap, Shield, Award } from 'lucide-react';
 import { formatSignal, formatSpeed, formatPing } from '../utils/formatters';
 
-export default function CarrierComparison({ carriers = [], selectedCarrier = 'All', onSelectCarrier }) {
+function CarrierComparison({ carriers = [], selectedCarrier = 'All', onSelectCarrier }) {
   return (
     <div className="glass-panel sidebar-card" style={{ padding: '20px' }}>
       <div className="card-section-title">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <BarChart3 size={16} color="#ffffff" />
+          <BarChart3 size={16} color="#38bdf8" />
           <span>Multi-Carrier Telemetry Benchmark</span>
         </div>
-        <span style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'none', fontWeight: 'normal' }}>
+        <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'none', fontWeight: 'normal' }}>
           Click carrier row to filter map & AI prediction
         </span>
       </div>
@@ -56,27 +56,27 @@ export default function CarrierComparison({ carriers = [], selectedCarrier = 'Al
                   className={isSelected ? 'selected' : ''}
                   onClick={() => onSelectCarrier && onSelectCarrier(carrier.name)}
                 >
-                  <td style={{ fontWeight: '800', color: '#ffffff' }}>
+                  <td style={{ fontWeight: '700', color: '#f8fafc' }}>
                     {carrier.name}
                     {carrier.rank === 1 && <span style={{ marginLeft: '6px', fontSize: '0.85rem' }}>🥇</span>}
                   </td>
-                  <td style={{ fontWeight: '700', color: '#ffffff' }}>
+                  <td style={{ fontWeight: '600', color: '#f8fafc' }}>
                     {formatSignal(carrier.signalStrength)}
                   </td>
                   <td>{formatSpeed(carrier.downloadSpeed)}</td>
                   <td>{formatSpeed(carrier.uploadSpeed)}</td>
                   <td>{formatPing(carrier.ping)}</td>
                   <td>
-                    <span style={{ color: '#ffffff', fontWeight: '700' }}>
+                    <span style={{ color: '#10b981', fontWeight: '600' }}>
                       {carrier.reliability}%
                     </span>
                   </td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '48px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', height: '5px', overflow: 'hidden' }}>
-                        <div style={{ width: `${carrier.trustScore}%`, background: '#ffffff', height: '100%' }}></div>
+                      <div style={{ width: '48px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', height: '5px', overflow: 'hidden' }}>
+                        <div style={{ width: `${carrier.trustScore}%`, background: 'linear-gradient(90deg, #3b82f6, #06b6d4)', height: '100%' }}></div>
                       </div>
-                      <span style={{ fontWeight: '800', color: '#ffffff' }}>{carrier.trustScore}</span>
+                      <span style={{ fontWeight: '700', color: '#38bdf8' }}>{carrier.trustScore}</span>
                     </div>
                   </td>
                 </tr>
@@ -88,3 +88,5 @@ export default function CarrierComparison({ carriers = [], selectedCarrier = 'Al
     </div>
   );
 }
+
+export default React.memo(CarrierComparison);

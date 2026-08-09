@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trophy } from 'lucide-react';
 
-export default function CarrierRanking({ carriers = [], selectedCarrier = 'All', onSelectCarrier }) {
+function CarrierRanking({ carriers = [], selectedCarrier = 'All', onSelectCarrier }) {
   const topCarrier = carriers[0] || { name: 'Jio', score: 93 };
   const otherCarriers = carriers.slice(1);
 
@@ -9,16 +9,16 @@ export default function CarrierRanking({ carriers = [], selectedCarrier = 'All',
     <div className="glass-panel sidebar-card">
       <div className="card-section-title">
         <span>Optimal Network Leaderboard</span>
-        <Trophy size={16} color="#ffffff" />
+        <Trophy size={16} color="#38bdf8" />
       </div>
 
       {/* Rank #1 Highlight */}
       <div
         onClick={() => onSelectCarrier && onSelectCarrier(topCarrier.name)}
         style={{
-          background: selectedCarrier.toLowerCase() === topCarrier.name.toLowerCase() ? '#ffffff' : 'rgba(255, 255, 255, 0.06)',
-          border: '1px solid #ffffff',
-          borderRadius: '8px',
+          background: selectedCarrier.toLowerCase() === topCarrier.name.toLowerCase() ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255, 255, 255, 0.04)',
+          border: selectedCarrier.toLowerCase() === topCarrier.name.toLowerCase() ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '10px',
           padding: '12px 14px',
           marginBottom: '10px',
           display: 'flex',
@@ -33,7 +33,7 @@ export default function CarrierRanking({ carriers = [], selectedCarrier = 'All',
           <div>
             <div style={{
               fontSize: '0.7rem',
-              color: selectedCarrier.toLowerCase() === topCarrier.name.toLowerCase() ? '#71717a' : '#a1a1aa',
+              color: '#38bdf8',
               textTransform: 'uppercase',
               letterSpacing: '0.04em',
               fontWeight: '700'
@@ -43,7 +43,7 @@ export default function CarrierRanking({ carriers = [], selectedCarrier = 'All',
             <div style={{
               fontSize: '1.05rem',
               fontWeight: '800',
-              color: selectedCarrier.toLowerCase() === topCarrier.name.toLowerCase() ? '#000000' : '#ffffff'
+              color: '#f8fafc'
             }}>
               {topCarrier.name}
             </div>
@@ -52,9 +52,9 @@ export default function CarrierRanking({ carriers = [], selectedCarrier = 'All',
         <div style={{
           fontSize: '1.2rem',
           fontWeight: '800',
-          color: selectedCarrier.toLowerCase() === topCarrier.name.toLowerCase() ? '#000000' : '#ffffff'
+          color: '#38bdf8'
         }}>
-          {topCarrier.score}<span style={{ fontSize: '0.75rem', fontWeight: 'normal' }}>/100</span>
+          {topCarrier.score}<span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: '#94a3b8' }}>/100</span>
         </div>
       </div>
 
@@ -73,7 +73,7 @@ export default function CarrierRanking({ carriers = [], selectedCarrier = 'All',
                 <span className="carrier-name">{c.name}</span>
               </div>
               <div className="score-badge">
-                {c.score}<span style={{ fontSize: '0.72rem', color: '#71717a' }}>/100</span>
+                {c.score}<span style={{ fontSize: '0.72rem', color: '#64748b' }}>/100</span>
               </div>
             </div>
           );
@@ -82,3 +82,5 @@ export default function CarrierRanking({ carriers = [], selectedCarrier = 'All',
     </div>
   );
 }
+
+export default React.memo(CarrierRanking);

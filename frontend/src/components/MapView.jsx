@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { getSignalColor, formatSignal, formatSpeed } from '../utils/formatters';
@@ -29,7 +29,7 @@ function MapRecenter({ center }) {
     if (center && typeof center.lat === 'number' && typeof center.lng === 'number') {
       map.flyTo([center.lat, center.lng], 14, {
         animate: true,
-        duration: 1.2
+        duration: 1.0
       });
     }
   }, [center, map]);
@@ -37,35 +37,47 @@ function MapRecenter({ center }) {
 }
 
 function MapEventsHandler({ onBoundsChange, onZoomChange }) {
+  const debounceTimerRef = useRef(null);
+
   const map = useMapEvents({
     moveend() {
-      if (onBoundsChange) {
-        const b = map.getBounds();
-        onBoundsChange({
-          south: b.getSouth(),
-          north: b.getNorth(),
-          west: b.getWest(),
-          east: b.getEast(),
-        });
-      }
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        if (onBoundsChange) {
+          const b = map.getBounds();
+          onBoundsChange({
+            south: b.getSouth(),
+            north: b.getNorth(),
+            west: b.getWest(),
+            east: b.getEast(),
+          });
+        }
+      }, 300);
     },
     zoomend() {
       const z = map.getZoom();
       if (onZoomChange) onZoomChange(z);
-      if (onBoundsChange) {
-        const b = map.getBounds();
-        onBoundsChange({
-          south: b.getSouth(),
-          north: b.getNorth(),
-          west: b.getWest(),
-          east: b.getEast(),
-        });
-      }
+
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        if (onBoundsChange) {
+          const b = map.getBounds();
+          onBoundsChange({
+            south: b.getSouth(),
+            north: b.getNorth(),
+            west: b.getWest(),
+            east: b.getEast(),
+          });
+        }
+      }, 300);
     }
   });
 
   useEffect(() => {
     if (onZoomChange) onZoomChange(map.getZoom());
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
   }, [map, onZoomChange]);
 
   return null;
@@ -80,7 +92,7 @@ function MapClickHandler({ onMapClick }) {
   return null;
 }
 
-export default function MapView({ measurements, selectedCarrier, setSelectedCarrier, selectedTowerNode, onSelectTowerNode, onMapClick, onBoundsChange, center }) {
+function MapView({ measurements, selectedCarrier, setSelectedCarrier, selectedTowerNode, onSelectTowerNode, onMapClick, onBoundsChange, center }) {
   const [mapType, setMapType] = useState('dark');
   const [zoomLevel, setZoomLevel] = useState(14);
 
@@ -88,9 +100,12 @@ export default function MapView({ measurements, selectedCarrier, setSelectedCarr
     setZoomLevel(z);
   }, []);
 
-  const filteredMeasurements = selectedCarrier === 'All'
-    ? measurements
-    : measurements.filter(m => m.carrier && m.carrier.toLowerCase() === selectedCarrier.toLowerCase());
+  const filteredMeasurements = useMemo(() => {
+    if (!measurements) return [];
+    return selectedCarrier === 'All'
+      ? measurements
+      : measurements.filter(m => m.carrier && m.carrier.toLowerCase() === selectedCarrier.toLowerCase());
+  }, [measurements, selectedCarrier]);
 
   const showMarkers = zoomLevel >= MIN_MARKER_ZOOM;
 
@@ -236,3 +251,5 @@ export default function MapView({ measurements, selectedCarrier, setSelectedCarr
     </div>
   );
 }
+
+export default React.memo(MapView);

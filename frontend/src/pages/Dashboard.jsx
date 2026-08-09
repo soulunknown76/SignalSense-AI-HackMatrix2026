@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
 import MapView from '../components/MapView';
@@ -36,85 +36,94 @@ export default function Dashboard({ user, onLogout }) {
     loadData();
   }, []);
 
-  // Reactive Carrier Selection Handler
-  const handleSelectCarrier = async (carrierName) => {
+  // Instant Non-Blocking Carrier Selection Handler
+  const handleSelectCarrier = useCallback((carrierName) => {
     setSelectedCarrier(carrierName);
     setPredictLoading(true);
-    try {
-      const pred = await fetchPrediction(center.lat, center.lng, carrierName, selectedTowerNode);
-      setPrediction(pred);
-    } catch (err) {
-      console.error('Failed to update carrier prediction:', err);
-    } finally {
-      setPredictLoading(false);
-    }
-  };
 
-  // Reactive Cell Tower Marker Click Handler
-  const handleSelectTowerNode = async (node) => {
+    setTimeout(async () => {
+      try {
+        const pred = await fetchPrediction(center.lat, center.lng, carrierName, selectedTowerNode);
+        setPrediction(pred);
+      } catch (err) {
+        console.error('Failed to update carrier prediction:', err);
+      } finally {
+        setPredictLoading(false);
+      }
+    }, 0);
+  }, [center.lat, center.lng, selectedTowerNode]);
+
+  // Instant Non-Blocking Cell Tower Marker Click Handler
+  const handleSelectTowerNode = useCallback((node) => {
     if (!node) return;
+    // Optimistic UI updates
     setSelectedTowerNode(node);
     setSelectedCarrier(node.carrier);
     setCenter({ lat: node.lat, lng: node.lng });
-    setPredictLoading(true);
 
-    try {
-      const pred = await fetchPrediction(node.lat, node.lng, node.carrier, node);
-      setPrediction(pred);
-    } catch (err) {
-      console.error('Failed to predict for cell tower node:', err);
-    } finally {
-      setPredictLoading(false);
-    }
-  };
+    setTimeout(async () => {
+      try {
+        const pred = await fetchPrediction(node.lat, node.lng, node.carrier, node);
+        setPrediction(pred);
+      } catch (err) {
+        console.error('Failed to predict for cell tower node:', err);
+      }
+    }, 0);
+  }, []);
 
-  // Reactive Map Bounds Change (Pan / Zoom Everywhere Handler)
-  const handleBoundsChange = async (bounds) => {
+  // Instant Non-Blocking Map Bounds Change Handler
+  const handleBoundsChange = useCallback(async (bounds) => {
     try {
       const mList = await fetchMeasurements(center.lat, center.lng, selectedCarrier, bounds);
       setMeasurements(mList);
     } catch (err) {
       console.error('Failed to update grid coverage for bounds:', err);
     }
-  };
+  }, [center.lat, center.lng, selectedCarrier]);
 
-  // Reactive Map Canvas Click Handler
-  const handleMapClick = async (lat, lng) => {
+  // Instant Non-Blocking Map Canvas Click Handler
+  const handleMapClick = useCallback((lat, lng) => {
+    // Optimistic UI updates
     setSelectedTowerNode(null);
     setCenter({ lat, lng });
     setPredictLoading(true);
-    try {
-      const pred = await fetchPrediction(lat, lng, selectedCarrier, null);
-      setPrediction(pred);
-    } catch (err) {
-      console.error('Failed to get location prediction:', err);
-    } finally {
-      setPredictLoading(false);
-    }
-  };
+
+    setTimeout(async () => {
+      try {
+        const pred = await fetchPrediction(lat, lng, selectedCarrier, null);
+        setPrediction(pred);
+      } catch (err) {
+        console.error('Failed to get location prediction:', err);
+      } finally {
+        setPredictLoading(false);
+      }
+    }, 0);
+  }, [selectedCarrier]);
 
   // Reactive Search & Location Selection Handler
-  const handleSelectLocation = async (loc) => {
-    setPredictLoading(true);
+  const handleSelectLocation = useCallback((loc) => {
     setSelectedTowerNode(null);
     setCenter({ lat: loc.lat, lng: loc.lng });
     setSearchLocation(loc.name);
+    setPredictLoading(true);
 
-    try {
-      const [mList, cList, pred] = await Promise.all([
-        fetchMeasurements(loc.lat, loc.lng, selectedCarrier),
-        fetchCarriers(loc.lat, loc.lng),
-        fetchPrediction(loc.lat, loc.lng, selectedCarrier, null)
-      ]);
-      setMeasurements(mList);
-      setCarriers(cList);
-      setPrediction(pred);
-    } catch (err) {
-      console.error('Failed to load location data:', err);
-    } finally {
-      setPredictLoading(false);
-    }
-  };
+    setTimeout(async () => {
+      try {
+        const [mList, cList, pred] = await Promise.all([
+          fetchMeasurements(loc.lat, loc.lng, selectedCarrier),
+          fetchCarriers(loc.lat, loc.lng),
+          fetchPrediction(loc.lat, loc.lng, selectedCarrier, null)
+        ]);
+        setMeasurements(mList);
+        setCarriers(cList);
+        setPrediction(pred);
+      } catch (err) {
+        console.error('Failed to load location data:', err);
+      } finally {
+        setPredictLoading(false);
+      }
+    }, 0);
+  }, [selectedCarrier]);
 
   return (
     <div className="app-container">

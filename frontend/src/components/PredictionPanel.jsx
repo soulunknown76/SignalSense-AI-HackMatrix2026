@@ -2,12 +2,12 @@ import React from 'react';
 import { Cpu, Compass, ShieldCheck, Zap, Radio } from 'lucide-react';
 import { getRiskBadge, formatSignal } from '../utils/formatters';
 
-export default function PredictionPanel({ prediction, loading, selectedTowerNode }) {
+function PredictionPanel({ prediction, loading, selectedTowerNode }) {
   if (loading) {
     return (
       <div className="glass-panel sidebar-card" style={{ textAlign: 'center', padding: '32px' }}>
-        <Cpu className="animate-spin" size={24} color="#ffffff" style={{ margin: '0 auto 10px' }} />
-        <p style={{ color: '#a1a1aa', fontSize: '0.82rem' }}>Evaluating IDW Spatial Interpolation & Cell Node RF Model...</p>
+        <Cpu className="animate-spin" size={24} color="#38bdf8" style={{ margin: '0 auto 10px' }} />
+        <p style={{ color: '#94a3b8', fontSize: '0.82rem' }}>Evaluating IDW Spatial Interpolation & RF Model...</p>
       </div>
     );
   }
@@ -17,15 +17,12 @@ export default function PredictionPanel({ prediction, loading, selectedTowerNode
     probabilityOfDeadZone,
     expectedSignal,
     expectedSpeed,
-    expectedPing,
     compositeQualityIndex,
     nearestCellNodeMeters,
     spatialConfidence,
     recommendation,
     lat,
-    lng,
-    selectedCarrier,
-    selectedNodeId
+    lng
   } = prediction || {
     riskLevel: 'LOW',
     probabilityOfDeadZone: 18,
@@ -47,33 +44,34 @@ export default function PredictionPanel({ prediction, loading, selectedTowerNode
       {/* Title Bar */}
       <div className="card-section-title">
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Cpu size={16} color="#ffffff" />
+          <Cpu size={16} color="#38bdf8" />
           <span>AI RF Prediction</span>
         </div>
         <span style={{
           fontSize: '0.72rem',
           padding: '3px 8px',
           borderRadius: '12px',
-          background: '#ffffff',
-          color: '#000000',
-          fontWeight: '800'
+          background: 'rgba(59, 130, 246, 0.2)',
+          border: '1px solid rgba(59, 130, 246, 0.4)',
+          color: '#38bdf8',
+          fontWeight: '700'
         }}>
           {riskBadge.label} {riskBadge.emoji}
         </span>
       </div>
 
       {selectedTowerNode ? (
-        <div style={{ fontSize: '0.78rem', padding: '8px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', border: '1px solid #ffffff', marginBottom: '12px', color: '#ffffff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', marginBottom: '2px' }}>
+        <div style={{ fontSize: '0.78rem', padding: '8px 10px', borderRadius: '6px', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', marginBottom: '12px', color: '#f8fafc' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', marginBottom: '2px', color: '#38bdf8' }}>
             <Radio size={13} /> Selected Node: {selectedTowerNode.carrier} Tower
           </div>
-          <div style={{ fontSize: '0.72rem', color: '#a1a1aa', fontFamily: 'monospace' }}>
+          <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontFamily: 'monospace' }}>
             eNodeB: {selectedTowerNode.eNodeB || 40159} | Cell ID: {selectedTowerNode.cellId || 102} | Band: {selectedTowerNode.band || '5G n78'}
           </div>
         </div>
       ) : (
         lat && lng && (
-          <div style={{ fontSize: '0.75rem', color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: 4, marginBottom: '12px' }}>
+          <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4, marginBottom: '12px' }}>
             <Compass size={11} /> Target Coordinates: {lat.toFixed(4)}, {lng.toFixed(4)}
           </div>
         )
@@ -81,7 +79,7 @@ export default function PredictionPanel({ prediction, loading, selectedTowerNode
 
       {/* CQI Composite Score */}
       <div style={{
-        background: '#09090b',
+        background: 'rgba(15, 23, 42, 0.6)',
         border: '1px solid var(--border-subtle)',
         borderRadius: '8px',
         padding: '10px 14px',
@@ -91,18 +89,18 @@ export default function PredictionPanel({ prediction, loading, selectedTowerNode
         justifyContent: 'space-between'
       }}>
         <div>
-          <div style={{ fontSize: '0.7rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '700' }}>
+          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '700' }}>
             Quality Index (CQI)
           </div>
-          <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#ffffff' }}>
-            {compositeQualityIndex || 92} <span style={{ fontSize: '0.75rem', color: '#71717a', fontWeight: 'normal' }}>/ 100</span>
+          <div style={{ fontSize: '1.3rem', fontWeight: '800', color: '#38bdf8' }}>
+            {compositeQualityIndex || 92} <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'normal' }}>/ 100</span>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.7rem', color: '#71717a', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
-            <ShieldCheck size={11} color="#ffffff" /> Spatial Conf.
+          <div style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end' }}>
+            <ShieldCheck size={11} color="#10b981" /> Spatial Conf.
           </div>
-          <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#ffffff' }}>
+          <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#f8fafc' }}>
             {spatialConfidence || 96}%
           </div>
         </div>
@@ -110,18 +108,18 @@ export default function PredictionPanel({ prediction, loading, selectedTowerNode
 
       {/* Dead Zone Progress Bar */}
       <div style={{ marginBottom: '14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#a1a1aa', marginBottom: '6px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '6px' }}>
           <span>Dead-Zone Risk</span>
-          <span style={{ fontWeight: '800', color: '#ffffff' }}>
+          <span style={{ fontWeight: '700', color: '#f8fafc' }}>
             {probabilityOfDeadZone}%
           </span>
         </div>
-        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
           <div
             style={{
               height: '100%',
               width: `${probabilityOfDeadZone}%`,
-              background: '#ffffff',
+              background: 'linear-gradient(90deg, #3b82f6, #06b6d4)',
               borderRadius: '4px',
               transition: 'width 0.4s ease'
             }}
@@ -156,18 +154,18 @@ export default function PredictionPanel({ prediction, loading, selectedTowerNode
         marginTop: '14px',
         padding: '10px 12px',
         borderRadius: '8px',
-        background: '#09090b',
+        background: 'rgba(15, 23, 42, 0.6)',
         border: '1px solid var(--border-subtle)',
         display: 'flex',
         gap: '10px',
         alignItems: 'flex-start'
       }}>
-        <Zap size={16} color="#ffffff" style={{ marginTop: 2, flexShrink: 0 }} />
+        <Zap size={16} color="#eab308" style={{ marginTop: 2, flexShrink: 0 }} />
         <div>
-          <div style={{ fontWeight: '800', fontSize: '0.72rem', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '2px' }}>
+          <div style={{ fontWeight: '700', fontSize: '0.72rem', color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '2px' }}>
             AI Carrier Recommendation
           </div>
-          <div style={{ fontSize: '0.8rem', color: '#a1a1aa', lineHeight: '1.4' }}>
+          <div style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.4' }}>
             {recommendation}
           </div>
         </div>
@@ -175,3 +173,5 @@ export default function PredictionPanel({ prediction, loading, selectedTowerNode
     </div>
   );
 }
+
+export default React.memo(PredictionPanel);
