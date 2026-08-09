@@ -24,11 +24,10 @@ export default function Dashboard({ user, onLogout }) {
       const health = await checkHealth();
       setBackendConnected(health.connected);
 
-      const [mList, cList, pred] = await Promise.all([
-        fetchMeasurements(25.148, 75.845, 'All'),
-        fetchCarriers(25.148, 75.845),
-        fetchPrediction(25.148, 75.845, 'All', null)
-      ]);
+      const mList = await fetchMeasurements(25.148, 75.845, 'All');
+      const cList = await fetchCarriers(25.148, 75.845, mList);
+      const pred = await fetchPrediction(25.148, 75.845, 'All', null);
+
       setMeasurements(mList);
       setCarriers(cList);
       setPrediction(pred);
@@ -76,6 +75,8 @@ export default function Dashboard({ user, onLogout }) {
     try {
       const mList = await fetchMeasurements(center.lat, center.lng, selectedCarrier, bounds);
       setMeasurements(mList);
+      const cList = await fetchCarriers(center.lat, center.lng, mList);
+      setCarriers(cList);
     } catch (err) {
       console.error('Failed to update grid coverage for bounds:', err);
     }
@@ -109,11 +110,10 @@ export default function Dashboard({ user, onLogout }) {
 
     setTimeout(async () => {
       try {
-        const [mList, cList, pred] = await Promise.all([
-          fetchMeasurements(loc.lat, loc.lng, selectedCarrier),
-          fetchCarriers(loc.lat, loc.lng),
-          fetchPrediction(loc.lat, loc.lng, selectedCarrier, null)
-        ]);
+        const mList = await fetchMeasurements(loc.lat, loc.lng, selectedCarrier);
+        const cList = await fetchCarriers(loc.lat, loc.lng, mList);
+        const pred = await fetchPrediction(loc.lat, loc.lng, selectedCarrier, null);
+
         setMeasurements(mList);
         setCarriers(cList);
         setPrediction(pred);
@@ -124,6 +124,7 @@ export default function Dashboard({ user, onLogout }) {
       }
     }, 0);
   }, [selectedCarrier]);
+
 
   return (
     <div className="app-container">

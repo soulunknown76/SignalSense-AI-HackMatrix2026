@@ -189,70 +189,140 @@ export async function fetchMeasurements(lat = 25.181, lng = 75.839, carrier = 'A
   return generateRegionalMeasurements(lat, lng);
 }
 
-export async function fetchCarriers(lat = 25.181, lng = 75.839) {
-  const MOCK_CARRIERS = [
+export async function fetchCarriers(lat = 25.181, lng = 75.839, measurements = null) {
+  try {
+    const res = await fetch(`${API_BASE}/carriers?lat=${lat}&lng=${lng}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    }
+  } catch (e) {
+    console.warn('Backend API /carriers offline, computing local carrier metrics dynamically.');
+  }
+
+  // Dynamic local calculation if measurements array is provided
+  if (Array.isArray(measurements) && measurements.length > 0) {
+    const carrierNames = ['Jio', 'Airtel', 'Vi', 'BSNL'];
+    const carrierStats = carrierNames.map((name) => {
+      const points = measurements.filter((m) => m.carrier === name);
+      if (points.length === 0) {
+        return {
+          name,
+          signalStrength: -90,
+          downloadSpeed: 15.0,
+          uploadSpeed: 4.0,
+          ping: 45,
+          reliability: 75,
+          score: 60,
+          trustScore: 65,
+          coverage: '70%',
+        };
+      }
+
+      const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+
+      const avgSignal = Math.round(avg(points.map((p) => p.signal || p.rsrp || -80)));
+      const avgSpeed = Math.round(avg(points.map((p) => p.speed || 30)) * 10) / 10;
+      const avgUpload = Math.round(avg(points.map((p) => p.upload || 8)) * 10) / 10;
+      const avgPing = Math.round(avg(points.map((p) => p.ping || 30)));
+      const avgReliability = Math.round(avg(points.map((p) => p.reliability || 85)));
+
+      // Score formula
+      const sSignal = Math.max(0, Math.min(100, Math.round(((avgSignal + 120) / 70) * 100)));
+      const sSpeed = Math.max(0, Math.min(100, Math.round(Math.log10(avgSpeed + 1) * 46)));
+      const sUpload = Math.max(0, Math.min(100, Math.round(Math.log10(avgUpload + 1) * 58)));
+      const sPing = Math.max(0, Math.min(100, Math.round(100 - ((avgPing - 10) / 140) * 100)));
+
+      const cqi = Math.round(0.3 * sSignal + 0.25 * sSpeed + 0.15 * sUpload + 0.15 * sPing + 0.15 * avgReliability);
+      const trustScore = Math.min(99, Math.round(cqi * 0.95 + avgReliability * 0.05));
+      const coverage = `${Math.min(99, Math.max(65, Math.round(cqi * 0.9 + 10)))}%`;
+
+      return {
+        name,
+        score: cqi,
+        signalStrength: avgSignal,
+        downloadSpeed: avgSpeed,
+        uploadSpeed: avgUpload,
+        ping: avgPing,
+        reliability: avgReliability,
+        trustScore,
+        coverage,
+      };
+    });
+
+    // Sort descending by CQI score
+    carrierStats.sort((a, b) => b.score - a.score);
+
+    const badges = ['🥇 Best 5G Performance', '🥈 Lowest Latency', '🥉 Moderate', 'Rural Coverage'];
+    return carrierStats.map((c, i) => ({
+      rank: i + 1,
+      ...c,
+      badge: badges[i] || 'Active Carrier',
+    }));
+  }
+
+  // Seed fallback per location coordinates
+  const locSeed = Math.abs(Math.sin(lat * 12.9898 + lng * 78.233) * 43758.5453) % 1;
+  const isJioTop = locSeed > 0.45;
+
+  return [
     {
       rank: 1,
-      name: 'Jio',
-      score: 93,
-      signalStrength: -68,
-      downloadSpeed: 62.4,
-      uploadSpeed: 18.1,
-      ping: 18,
-      reliability: 98,
-      trustScore: 96,
-      coverage: '99%',
+      name: isJioTop ? 'Jio' : 'Airtel',
+      score: Math.round(85 + locSeed * 12),
+      signalStrength: -65 - Math.floor(locSeed * 8),
+      downloadSpeed: Math.round((55 + locSeed * 35) * 10) / 10,
+      uploadSpeed: Math.round((15 + locSeed * 10) * 10) / 10,
+      ping: Math.round(16 + locSeed * 8),
+      reliability: Math.round(94 + locSeed * 5),
+      trustScore: Math.round(90 + locSeed * 8),
+      coverage: `${Math.round(92 + locSeed * 7)}%`,
       badge: '🥇 Best 5G Performance'
     },
     {
       rank: 2,
-      name: 'Airtel',
-      score: 87,
-      signalStrength: -72,
-      downloadSpeed: 54.2,
-      uploadSpeed: 16.0,
-      ping: 21,
-      reliability: 95,
-      trustScore: 92,
-      coverage: '97%',
+      name: isJioTop ? 'Airtel' : 'Jio',
+      score: Math.round(78 + locSeed * 10),
+      signalStrength: -72 - Math.floor(locSeed * 6),
+      downloadSpeed: Math.round((45 + locSeed * 25) * 10) / 10,
+      uploadSpeed: Math.round((12 + locSeed * 8) * 10) / 10,
+      ping: Math.round(20 + locSeed * 6),
+      reliability: Math.round(90 + locSeed * 4),
+      trustScore: Math.round(85 + locSeed * 6),
+      coverage: `${Math.round(88 + locSeed * 6)}%`,
       badge: '🥈 Lowest Latency'
     },
     {
       rank: 3,
       name: 'Vi',
-      score: 64,
-      signalStrength: -86,
-      downloadSpeed: 28.1,
-      uploadSpeed: 7.2,
-      ping: 42,
-      reliability: 79,
-      trustScore: 74,
-      coverage: '84%',
+      score: Math.round(60 + locSeed * 12),
+      signalStrength: -84 - Math.floor(locSeed * 10),
+      downloadSpeed: Math.round((25 + locSeed * 18) * 10) / 10,
+      uploadSpeed: Math.round((6 + locSeed * 6) * 10) / 10,
+      ping: Math.round(35 + locSeed * 12),
+      reliability: Math.round(78 + locSeed * 8),
+      trustScore: Math.round(70 + locSeed * 8),
+      coverage: `${Math.round(78 + locSeed * 8)}%`,
       badge: '🥉 Moderate'
     },
     {
       rank: 4,
       name: 'BSNL',
-      score: 52,
-      signalStrength: -95,
-      downloadSpeed: 12.0,
-      uploadSpeed: 3.1,
-      ping: 75,
-      reliability: 62,
-      trustScore: 58,
-      coverage: '72%',
+      score: Math.round(35 + locSeed * 20),
+      signalStrength: -96 - Math.floor(locSeed * 12),
+      downloadSpeed: Math.round((5 + locSeed * 12) * 10) / 10,
+      uploadSpeed: Math.round((1 + locSeed * 3) * 10) / 10,
+      ping: Math.round(70 + locSeed * 35),
+      reliability: Math.round(55 + locSeed * 15),
+      trustScore: Math.round(45 + locSeed * 20),
+      coverage: `${Math.round(60 + locSeed * 15)}%`,
       badge: 'Rural Coverage'
     }
   ];
-
-  try {
-    const res = await fetch(`${API_BASE}/carriers?lat=${lat}&lng=${lng}`);
-    if (res.ok) return await res.json();
-  } catch (e) {
-    console.warn('Backend API /carriers offline, using carrier dataset.');
-  }
-  return MOCK_CARRIERS;
 }
+
 
 export async function fetchPrediction(lat, lng, carrier = 'All', selectedNode = null) {
   try {
