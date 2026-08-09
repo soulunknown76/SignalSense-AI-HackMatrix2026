@@ -159,6 +159,7 @@ export default function Dashboard({ user, onLogout }) {
           {/* Best Network Leaderboard */}
           <CarrierRanking
             carriers={carriers}
+            measurements={measurements}
             selectedCarrier={selectedCarrier}
             onSelectCarrier={handleSelectCarrier}
           />
@@ -171,9 +172,12 @@ export default function Dashboard({ user, onLogout }) {
       {/* Bottom Section: Multi-Carrier Telemetry Comparison Table */}
       <CarrierComparison
         carriers={carriers}
+        measurements={measurements}
         selectedCarrier={selectedCarrier}
         onSelectCarrier={handleSelectCarrier}
+        searchLocation={searchLocation}
       />
+
     </div>
   );
 }

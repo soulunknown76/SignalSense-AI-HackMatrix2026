@@ -1,9 +1,43 @@
 import React from 'react';
 import { Trophy } from 'lucide-react';
 
-function CarrierRanking({ carriers = [], selectedCarrier = 'All', onSelectCarrier }) {
-  const topCarrier = carriers[0] || { name: 'Jio', score: 93 };
-  const otherCarriers = carriers.slice(1);
+export default function CarrierRanking({ carriers = [], measurements = [], selectedCarrier = 'All', onSelectCarrier }) {
+  // Compute dynamic live rankings from measurements if present
+  const carrierNames = ['Jio', 'Airtel', 'Vi', 'BSNL'];
+  
+  let activeCarriers = carriers;
+
+  if (Array.isArray(measurements) && measurements.length > 0) {
+    const computed = carrierNames.map((name) => {
+      const points = measurements.filter((m) => m.carrier === name);
+      const fallbackCarrier = carriers.find((c) => c.name === name) || {};
+
+      if (!points || points.length === 0) {
+        return { name, score: fallbackCarrier.score || 50 };
+      }
+
+      const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+      const avgSignal = Math.round(avg(points.map((p) => p.signal || p.rsrp || -80)));
+      const avgSpeed = Math.round(avg(points.map((p) => p.speed || 30)) * 10) / 10;
+      const avgUpload = Math.round(avg(points.map((p) => p.upload || 8)) * 10) / 10;
+      const avgPing = Math.round(avg(points.map((p) => p.ping || 30)));
+      const avgReliability = Math.round(avg(points.map((p) => p.reliability || 85)));
+
+      const sSignal = Math.max(0, Math.min(100, Math.round(((avgSignal + 120) / 70) * 100)));
+      const sSpeed = Math.max(0, Math.min(100, Math.round(Math.log10(avgSpeed + 1) * 46)));
+      const sUpload = Math.max(0, Math.min(100, Math.round(Math.log10(avgUpload + 1) * 58)));
+      const sPing = Math.max(0, Math.min(100, Math.round(100 - ((avgPing - 10) / 140) * 100)));
+
+      const cqi = Math.round(0.3 * sSignal + 0.25 * sSpeed + 0.15 * sUpload + 0.15 * sPing + 0.15 * avgReliability);
+      return { name, score: cqi };
+    });
+
+    computed.sort((a, b) => b.score - a.score);
+    activeCarriers = computed;
+  }
+
+  const topCarrier = activeCarriers[0] || { name: 'Jio', score: 93 };
+  const otherCarriers = activeCarriers.slice(1);
 
   return (
     <div className="glass-panel sidebar-card">
@@ -82,5 +116,3 @@ function CarrierRanking({ carriers = [], selectedCarrier = 'All', onSelectCarrie
     </div>
   );
 }
-
-export default React.memo(CarrierRanking);
