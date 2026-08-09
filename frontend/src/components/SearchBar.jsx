@@ -2,12 +2,74 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, Navigation, Loader2, X, Building, Radio, Compass } from 'lucide-react';
 
 const PRESET_LOCATIONS = [
+  { name: 'MITS Gwalior', lat: 26.230267, lng: 78.207172 },
   { name: 'Rajeev Gandhi Nagar', lat: 25.148, lng: 75.845 },
   { name: 'Landmark City', lat: 25.202, lng: 75.828 },
   { name: 'Talwandi', lat: 25.158, lng: 75.832 },
-  { name: 'Vigyan Nagar', lat: 25.162, lng: 75.848 },
   { name: 'Connaught Place', lat: 28.6315, lng: 77.2167 },
   { name: 'BKC Mumbai', lat: 19.0600, lng: 72.8680 }
+];
+
+const KNOWN_LANDMARKS = [
+  {
+    keywords: [
+      'madhav institute of technology',
+      'madhav institute of technology gwalior',
+      'madhav institute of technology and science',
+      'madhav institute of technology & science',
+      'madhav institute',
+      'mits gwalior',
+      'mits',
+      'mits college'
+    ],
+    name: 'Madhav Institute of Technology & Science (MITS Gwalior)',
+    display_name: 'Madhav Institute of Technology & Science (MITS), MITS Road, Gwalior, Madhya Pradesh, 474001, India',
+    lat: 26.230267,
+    lng: 78.207172,
+    type: 'university',
+    categoryLabel: 'Institute',
+    categoryColor: '#38bdf8'
+  },
+  {
+    keywords: ['iiitm gwalior', 'abv iiitm', 'iiitm', 'atal bihari vajpayee iiitm', 'iiitm gwalior campus'],
+    name: 'ABV-IIITM Gwalior',
+    display_name: 'ABV-Indian Institute of Information Technology and Management, Morena Link Rd, Gwalior, Madhya Pradesh, 474015, India',
+    lat: 26.2495,
+    lng: 78.1740,
+    type: 'university',
+    categoryLabel: 'Institute',
+    categoryColor: '#38bdf8'
+  },
+  {
+    keywords: ['lnipe gwalior', 'lnipe', 'lakshmibai national institute of physical education'],
+    name: 'LNIPE Gwalior',
+    display_name: 'Lakshmibai National Institute of Physical Education, Racecourse Rd, Gwalior, Madhya Pradesh, 474002, India',
+    lat: 26.2191,
+    lng: 78.1925,
+    type: 'university',
+    categoryLabel: 'Institute',
+    categoryColor: '#38bdf8'
+  },
+  {
+    keywords: ['gwalior fort', 'gwalior kila', 'fort gwalior'],
+    name: 'Gwalior Fort',
+    display_name: 'Gwalior Fort, Gwalior, Madhya Pradesh, India',
+    lat: 26.2295,
+    lng: 78.1685,
+    type: 'landmark',
+    categoryLabel: 'Landmark',
+    categoryColor: '#f59e0b'
+  },
+  {
+    keywords: ['gwalior', 'gwalior city', 'gwalior mp'],
+    name: 'Gwalior City',
+    display_name: 'Gwalior, Madhya Pradesh, India',
+    lat: 26.2183,
+    lng: 78.1828,
+    type: 'city',
+    categoryLabel: 'City',
+    categoryColor: '#e4e4e7'
+  }
 ];
 
 export default function SearchBar({ searchLocation, setSearchLocation, onSelectLocation }) {
@@ -50,22 +112,107 @@ export default function SearchBar({ searchLocation, setSearchLocation, onSelectL
 
     debounceTimer.current = setTimeout(async () => {
       try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            text
-          )}&addressdetails=1&limit=8`,
-          {
-            headers: {
-              'Accept-Language': 'en',
-            },
+        const norm = text.toLowerCase().trim();
+        const results = [];
+
+        // 1. Local Known Landmark Match
+        KNOWN_LANDMARKS.forEach((item) => {
+          if (item.keywords.some((k) => norm.includes(k) || k.includes(norm))) {
+            results.push({
+              place_id: `known_${item.name}`,
+              lat: item.lat.toString(),
+              lon: item.lng.toString(),
+              display_name: item.display_name,
+              subLocality: item.name,
+              isKnown: true,
+              categoryLabel: item.categoryLabel,
+              categoryColor: item.categoryColor,
+              address: {
+                amenity: item.name,
+                city: 'Gwalior',
+                state: 'Madhya Pradesh'
+              }
+            });
           }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setSuggestions(data);
-          setShowDropdown(data.length > 0);
-          setSelectedIndex(-1);
+        });
+
+        // 2. Transformed Queries (acronym expansion like "madhav institute of technology" -> "MITS")
+        const searchQueries = [text];
+        if (/madhav\s+institute(\s+of\s+technology)?(\s+and\s+science)?/i.test(text)) {
+          const acronymQuery = text.replace(/madhav\s+institute(\s+of\s+technology)?(\s+and\s+science)?/gi, 'MITS');
+          if (!searchQueries.includes(acronymQuery)) {
+            searchQueries.push(acronymQuery);
+          }
         }
+
+        // 3. Query OpenStreetMap Nominatim with proper User-Agent
+        for (const queryStr of searchQueries) {
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryStr)}&addressdetails=1&limit=6`,
+              {
+                headers: {
+                  'Accept-Language': 'en',
+                  'User-Agent': 'SignalSenseAI/1.0 (contact@signalsense.ai)'
+                }
+              }
+            );
+            if (res.ok) {
+              const data = await res.json();
+              data.forEach(item => {
+                const itemLat = parseFloat(item.lat);
+                const itemLon = parseFloat(item.lon);
+                if (!results.some(r => Math.abs(parseFloat(r.lat) - itemLat) < 0.001 && Math.abs(parseFloat(r.lon) - itemLon) < 0.001)) {
+                  results.push(item);
+                }
+              });
+            }
+          } catch (e) {
+            console.warn('Nominatim search error:', e);
+          }
+        }
+
+        // 4. Photon API Fallback if Nominatim yields few or no non-local results
+        if (results.length <= 1) {
+          for (const queryStr of searchQueries) {
+            try {
+              const photonRes = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(queryStr)}&limit=5`);
+              if (photonRes.ok) {
+                const photonData = await photonRes.json();
+                if (photonData.features) {
+                  photonData.features.forEach(f => {
+                    const props = f.properties;
+                    const coords = f.geometry.coordinates;
+                    const lon = coords[0];
+                    const lat = coords[1];
+                    const name = props.name || props.street || props.city;
+                    const displayName = [props.name, props.street, props.city, props.state, props.country].filter(Boolean).join(', ');
+                    if (name && !results.some(r => Math.abs(parseFloat(r.lat) - lat) < 0.001 && Math.abs(parseFloat(r.lon) - lon) < 0.001)) {
+                      results.push({
+                        place_id: `photon_${props.osm_id || Math.random()}`,
+                        lat: lat.toString(),
+                        lon: lon.toString(),
+                        display_name: displayName,
+                        subLocality: name,
+                        address: {
+                          amenity: props.name,
+                          city: props.city,
+                          state: props.state
+                        }
+                      });
+                    }
+                  });
+                }
+              }
+            } catch (e) {
+              console.warn('Photon fallback error:', e);
+            }
+          }
+        }
+
+        setSuggestions(results);
+        setShowDropdown(results.length > 0);
+        setSelectedIndex(-1);
       } catch (err) {
         console.warn('Geocoding search error:', err);
       } finally {
@@ -83,12 +230,12 @@ export default function SearchBar({ searchLocation, setSearchLocation, onSelectL
 
   const handleSelectSuggestion = (item) => {
     const address = item.address || {};
-    const subLocality = address.neighbourhood || address.suburb || address.quarter || address.residential || address.village || address.city_district || item.display_name.split(',')[0];
+    const subLocality = item.subLocality || address.neighbourhood || address.suburb || address.quarter || address.residential || address.village || address.city_district || (item.display_name ? item.display_name.split(',')[0] : 'Location');
     const city = address.city || address.town || address.county || address.state_district || '';
     const state = address.state || address.country || '';
     const postcode = address.postcode ? ` (${address.postcode})` : '';
 
-    const fullLocName = `${subLocality}${postcode}, ${city ? city + ', ' : ''}${state}`;
+    const fullLocName = item.isKnown ? item.subLocality : `${subLocality}${postcode}${city ? ', ' + city : ''}${state ? ', ' + state : ''}`;
     
     const lat = parseFloat(item.lat);
     const lng = parseFloat(item.lon);
@@ -151,6 +298,20 @@ export default function SearchBar({ searchLocation, setSearchLocation, onSelectL
       return;
     }
 
+    // Direct match against KNOWN_LANDMARKS if query was submitted directly
+    const norm = query.toLowerCase().trim();
+    const directMatch = KNOWN_LANDMARKS.find(item => item.keywords.some(k => norm.includes(k) || k.includes(norm)));
+    if (directMatch) {
+      setQuery(directMatch.name);
+      setSearchLocation(directMatch.name);
+      onSelectLocation({
+        name: directMatch.name,
+        lat: directMatch.lat,
+        lng: directMatch.lng
+      });
+      return;
+    }
+
     if (query.trim().length >= 2) {
       fetchSuggestions(query);
     }
@@ -200,7 +361,11 @@ export default function SearchBar({ searchLocation, setSearchLocation, onSelectL
   };
 
   const getCategoryBadge = (item) => {
+    if (item.isKnown) {
+      return { label: item.categoryLabel || 'Institute', color: item.categoryColor || '#38bdf8' };
+    }
     const type = item.type || item.class || '';
+    if (type === 'university' || type === 'college' || type === 'school') return { label: 'Institute', color: '#38bdf8' };
     if (type === 'neighbourhood' || type === 'suburb' || type === 'quarter' || type === 'residential') return { label: 'Area', color: '#ffffff' };
     if (type === 'city' || type === 'administrative' || type === 'town') return { label: 'City', color: '#e4e4e7' };
     if (type === 'communication' || type === 'mast' || type === 'telecom') return { label: 'Tower', color: '#ffffff' };
@@ -214,7 +379,7 @@ export default function SearchBar({ searchLocation, setSearchLocation, onSelectL
         <input
           type="text"
           className="search-input"
-          placeholder="Search any small area, locality, landmark, or tower ID... (e.g. Rajeev Gandhi Nagar, Landmark City, BKC)"
+          placeholder="Search any area, landmark, college, or tower... (e.g. Madhav Institute of Technology Gwalior, MITS, CP Delhi)"
           value={query}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
@@ -292,7 +457,7 @@ export default function SearchBar({ searchLocation, setSearchLocation, onSelectL
             const category = getCategoryBadge(item);
             const isHighlighted = idx === selectedIndex;
             const address = item.address || {};
-            const subLocality = address.neighbourhood || address.suburb || address.quarter || address.residential || address.village || item.display_name.split(',')[0];
+            const subLocality = item.subLocality || address.neighbourhood || address.suburb || address.quarter || address.residential || address.village || (item.display_name ? item.display_name.split(',')[0] : 'Location');
             const detailText = item.display_name;
 
             return (
@@ -315,7 +480,7 @@ export default function SearchBar({ searchLocation, setSearchLocation, onSelectL
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                  <span className="search-cat-badge">
+                  <span className="search-cat-badge" style={{ borderColor: category.color, color: category.color }}>
                     {category.label}
                   </span>
                   <span style={{ fontSize: '0.7rem', color: '#71717a', fontFamily: 'monospace' }}>
@@ -330,3 +495,4 @@ export default function SearchBar({ searchLocation, setSearchLocation, onSelectL
     </div>
   );
 }
+
