@@ -5,7 +5,7 @@ import MapView from '../components/MapView';
 import CarrierRanking from '../components/CarrierRanking';
 import PredictionPanel from '../components/PredictionPanel';
 import CarrierComparison from '../components/CarrierComparison';
-import { fetchMeasurements, fetchCarriers, fetchPrediction } from '../services/api';
+import { fetchMeasurements, fetchCarriers, fetchPrediction, checkHealth } from '../services/api';
 
 export default function Dashboard() {
   const [searchLocation, setSearchLocation] = useState('Kota Junction');
@@ -20,6 +20,9 @@ export default function Dashboard() {
   // Initial load
   useEffect(() => {
     async function loadData() {
+      const health = await checkHealth();
+      setBackendConnected(health.connected);
+
       const [mList, cList] = await Promise.all([
         fetchMeasurements(),
         fetchCarriers()
@@ -32,6 +35,7 @@ export default function Dashboard() {
     }
     loadData();
   }, []);
+
 
   const handleMapClick = async (lat, lng) => {
     setPredictLoading(true);

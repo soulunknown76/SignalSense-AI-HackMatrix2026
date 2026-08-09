@@ -1,0 +1,17 @@
+{
+  "name": "signalsense-ai-root",
+  "version": "1.0.0",
+  "description": "SignalSense AI - Cellular Coverage Intelligence & AI Dead Zone Prediction",
+  "private": true,
+  "scripts": {
+    "start": "npm run server",
+    "server": "npm run start --prefix backend",
+    "server:dev": "npm run dev --prefix backend",
+    "frontend": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run server:dev\" \"npm run frontend\"",
+    "install:all": "npm install --prefix frontend && npm install --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

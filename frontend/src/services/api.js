@@ -130,6 +130,19 @@ export async function fetchPrediction(lat, lng) {
   };
 }
 
+export async function checkHealth() {
+  try {
+    const res = await fetch(`${API_BASE}/health`);
+    if (res.ok) {
+      const data = await res.json();
+      return { connected: true, data };
+    }
+  } catch (e) {
+    // Backend offline
+  }
+  return { connected: false };
+}
+
 export async function fetchRecommendation(lat, lng) {
   try {
     const res = await fetch(`${API_BASE}/recommendation?lat=${lat}&lng=${lng}`);
@@ -143,3 +156,4 @@ export async function fetchRecommendation(lat, lng) {
     reasoning: 'Airtel operates a dedicated high-band cell tower 350m from target coordinate with 92% reliability.'
   };
 }
+
