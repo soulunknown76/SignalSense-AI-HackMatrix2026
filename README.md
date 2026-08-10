@@ -1,7 +1,7 @@
-# 📡 SignalSense AI
+# 📡 SignalSense AI — Team "The Semicolons"
 
 > **AI-Powered Real-Time Cellular Coverage Mapping, RF Telemetry Analytics & Dead-Zone Prediction Engine**  
-> *Developed for HackMatrix 2026*
+> *Official Submission by Team **The Semicolons** for HackMatrix 2026*
 
 ![SignalSense AI Theme](https://img.shields.io/badge/UI%20Theme-Vibrant%20Glassmorphism-3b82f6?style=for-the-badge)
 ![Tech Stack](https://img.shields.io/badge/Stack-React%20%7C%20Vite%20%7C%20Express%20%7C%20Leaflet-06b6d4?style=for-the-badge)

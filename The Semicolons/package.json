@@ -5,11 +5,11 @@
   "private": true,
   "scripts": {
     "start": "npm run server",
-    "server": "npm run start --prefix \"The Semicolons/backend\"",
-    "server:dev": "npm run dev --prefix \"The Semicolons/backend\"",
-    "frontend": "npm run dev --prefix \"The Semicolons/frontend\"",
+    "server": "npm run start --prefix backend",
+    "server:dev": "npm run dev --prefix backend",
+    "frontend": "npm run dev --prefix frontend",
     "dev": "concurrently \"npm run server:dev\" \"npm run frontend\"",
-    "install:all": "npm install --prefix \"The Semicolons/frontend\" && npm install --prefix \"The Semicolons/backend\""
+    "install:all": "npm install --prefix frontend && npm install --prefix backend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
