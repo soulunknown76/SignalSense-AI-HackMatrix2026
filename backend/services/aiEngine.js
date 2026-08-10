@@ -23,7 +23,8 @@ export const generateRegionalTelemetry = (centerLat, centerLng) => {
     const dist = 0.0035 + ((i * 7 + 3) % 11) * 0.0024;
     const lat = Number((centerLat + Math.sin(angle) * dist).toFixed(5));
     const lng = Number((centerLng + Math.cos(angle) * dist).toFixed(5));
-    const carrier = carriers[i % carriers.length];
+    const pointHash = Math.abs(Math.round(lat * 100000 ^ lng * 100000));
+    const carrier = carriers[pointHash % carriers.length];
     
     let baseSignal = -72;
     let baseSpeed = 48;
@@ -32,15 +33,15 @@ export const generateRegionalTelemetry = (centerLat, centerLng) => {
     else if (carrier === 'Vi') { baseSignal = -86; baseSpeed = 24; }
     else if (carrier === 'BSNL') { baseSignal = -96; baseSpeed = 10; }
     
-    const signalVariation = ((i * 13) % 25) - 12;
+    const signalVariation = ((pointHash * 13) % 25) - 12;
     const signal = Math.min(-55, Math.max(-112, baseSignal + signalVariation));
-    const speed = Math.max(2, Math.round(baseSpeed + ((i * 9) % 20) - 10));
+    const speed = Math.max(2, Math.round(baseSpeed + ((pointHash * 9) % 20) - 10));
     const upload = Math.max(1, Math.round(speed * 0.3));
-    const ping = Math.max(14, Math.round(20 + (-signal - 60) * 1.2 + (i % 7)));
+    const ping = Math.max(14, Math.round(20 + (-signal - 60) * 1.2 + (pointHash % 7)));
     const reliability = Math.max(40, Math.min(99, Math.round(100 - (-signal - 60) * 0.8)));
 
     points.push({
-      id: `ai_${i}_${Math.round(lat*1000)}_${Math.round(lng*1000)}`,
+      id: `ai_${Math.round(lat*10000)}_${Math.round(lng*10000)}`,
       lat, lng, carrier, signal, speed, upload, ping, reliability
     });
   }

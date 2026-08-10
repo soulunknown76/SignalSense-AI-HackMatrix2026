@@ -19,6 +19,7 @@ function seededRandom(seed) {
 }
 
 const gridCache = new Map();
+const cellCache = new Map();
 
 export function generateGridCoverageForBounds(bounds, carrier = 'All') {
   if (!bounds || !bounds.south || !bounds.north) {
@@ -29,15 +30,6 @@ export function generateGridCoverageForBounds(bounds, carrier = 'All') {
   if (gridCache.has(cacheKey)) {
     return gridCache.get(cacheKey);
   }
-
-  const centerLat = (bounds.south + bounds.north) / 2;
-  const centerLng = (bounds.west + bounds.east) / 2;
-
-  // Location-unique environmental propagation signature
-  const locSig = Math.sin(centerLat * 14.123 + centerLng * 29.456) * 1000;
-  const locSignalOffset = Math.round(Math.sin(locSig) * 16);
-  const locSpeedOffset = Math.round(Math.cos(locSig * 1.4) * 22);
-  const locPingOffset = Math.round(-Math.sin(locSig * 0.8) * 12);
 
   const carriers = ['Jio', 'Airtel', 'Vi', 'BSNL'];
   const times = ['1 min ago', '3 mins ago', '8 mins ago', '15 mins ago', '24 mins ago'];
@@ -51,6 +43,7 @@ export function generateGridCoverageForBounds(bounds, carrier = 'All') {
 
   for (let latIdx = minLatIndex; latIdx <= maxLatIndex; latIdx++) {
     for (let lngIdx = minLngIndex; lngIdx <= maxLngIndex; lngIdx++) {
+      const cellId = `fixed_${latIdx}_${lngIdx}`;
       const cellSeed = latIdx * 73856093 ^ lngIdx * 19349663;
       
       // Sparsity filter: skip ~35% of grid cells to reduce signal density
@@ -69,23 +62,40 @@ export function generateGridCoverageForBounds(bounds, carrier = 'All') {
         continue;
       }
 
+      // Check per-cell cache for absolute stability across recalculations
+      if (cellCache.has(cellId)) {
+        const cachedNode = cellCache.get(cellId);
+        if (!carrier || carrier === 'All' || cachedNode.carrier.toLowerCase() === carrier.toLowerCase()) {
+          points.push(cachedNode);
+          continue;
+        }
+      }
+
+      // Calculate location signature deterministically from fixed cell coordinates
+      const cellLat = latIdx * STEP;
+      const cellLng = lngIdx * STEP;
+      const cellLocSig = Math.sin(cellLat * 14.123 + cellLng * 29.456) * 1000;
+      const locSignalOffset = Math.round(Math.sin(cellLocSig) * 12);
+      const locSpeedOffset = Math.round(Math.cos(cellLocSig * 1.4) * 16);
+      const locPingOffset = Math.round(-Math.sin(cellLocSig * 0.8) * 10);
+
       const meta = CARRIER_METRICS[cName];
-      const signalVar = Math.floor((seededRandom(cellSeed + 4) * 20) - 10);
+      const signalVar = Math.floor((seededRandom(cellSeed + 4) * 18) - 9);
       const rsrp = Math.min(-54, Math.max(-114, meta.baseRsrp + locSignalOffset + signalVar));
       const rsrq = Number((-6 - (-rsrp - 60) * 0.11 - Math.floor(seededRandom(cellSeed + 5) * 3)).toFixed(1));
       const sinr = Math.max(-2, Math.round(24 - (-rsrp - 60) * 0.38));
 
-      const speed = Math.max(3, Math.round(meta.baseSpeed + locSpeedOffset + (seededRandom(cellSeed + 6) * 16 - 8)));
+      const speed = Math.max(3, Math.round(meta.baseSpeed + locSpeedOffset + (seededRandom(cellSeed + 6) * 14 - 7)));
       const upload = Math.max(1, Math.round(meta.baseUpload + Math.round(locSpeedOffset * 0.3) + (seededRandom(cellSeed + 7) * 6 - 3)));
       const ping = Math.max(12, Math.round(meta.basePing + locPingOffset + (-rsrp - 60) * 0.8));
       const reliability = Math.max(45, Math.min(99, Math.round(100 - (-rsrp - 60) * 0.75)));
 
       const eNodeB = 100000 + (Math.abs(latIdx * 31 + lngIdx * 17) % 899999);
-      const cellId = (eNodeB * 256) + Math.abs(latIdx + lngIdx) % 4;
+      const subCellId = (eNodeB * 256) + Math.abs(latIdx + lngIdx) % 4;
       const band = meta.bands[Math.abs(cellSeed) % meta.bands.length];
 
-      points.push({
-        id: `fixed_${latIdx}_${lngIdx}`,
+      const node = {
+        id: cellId,
         lat,
         lng,
         carrier: cName,
@@ -100,10 +110,13 @@ export function generateGridCoverageForBounds(bounds, carrier = 'All') {
         mcc: meta.mcc,
         mnc: meta.mnc,
         eNodeB,
-        cellId,
+        cellId: subCellId,
         band,
         time: times[Math.abs(cellSeed) % times.length]
-      });
+      };
+
+      cellCache.set(cellId, node);
+      points.push(node);
     }
   }
 
@@ -140,15 +153,17 @@ export async function fetchOverpassCellTowers(lat, lng) {
       if (data.elements && data.elements.length > 0) {
         const carriers = ['Jio', 'Airtel', 'Vi', 'BSNL'];
         return data.elements.map((el, i) => {
+          const elHash = Math.abs(Number(el.id));
           const carrierTag = el.tags?.operator || el.tags?.brand || '';
           const normalizedCarrier = carrierTag.toLowerCase().includes('jio') ? 'Jio' 
             : carrierTag.toLowerCase().includes('airtel') ? 'Airtel' 
             : carrierTag.toLowerCase().includes('vi') || carrierTag.toLowerCase().includes('vodafone') || carrierTag.toLowerCase().includes('idea') ? 'Vi'
             : carrierTag.toLowerCase().includes('bsnl') ? 'BSNL'
-            : carriers[i % carriers.length];
+            : carriers[elHash % carriers.length];
 
           const meta = CARRIER_METRICS[normalizedCarrier];
-          const rsrp = Math.min(-58, Math.max(-112, meta.baseRsrp + ((i * 13) % 23) - 11));
+          const signalOffset = ((elHash * 13) % 23) - 11;
+          const rsrp = Math.min(-58, Math.max(-112, meta.baseRsrp + signalOffset));
           
           return {
             id: `osm_tower_${el.id}`,
@@ -159,15 +174,15 @@ export async function fetchOverpassCellTowers(lat, lng) {
             rsrp,
             rsrq: Number((-6 - (-rsrp - 60) * 0.1).toFixed(1)),
             sinr: Math.max(0, Math.round(22 - (-rsrp - 60) * 0.35)),
-            speed: Math.max(3, Math.round(meta.baseSpeed + ((i * 9) % 20) - 10)),
-            upload: Math.max(1, Math.round(meta.baseUpload + ((i * 3) % 6) - 3)),
+            speed: Math.max(3, Math.round(meta.baseSpeed + ((elHash * 9) % 20) - 10)),
+            upload: Math.max(1, Math.round(meta.baseUpload + ((elHash * 3) % 6) - 3)),
             ping: Math.max(14, Math.round(meta.basePing + (-rsrp - 60) * 1.0)),
             reliability: Math.max(50, Math.min(99, Math.round(100 - (-rsrp - 60) * 0.7))),
             mcc: meta.mcc,
             mnc: meta.mnc,
             eNodeB: 100000 + (el.id % 899999),
             cellId: (el.id % 65535),
-            band: meta.bands[i % meta.bands.length],
+            band: meta.bands[elHash % meta.bands.length],
             isRealOsmNode: true,
             time: 'Live Mapped Tower'
           };
